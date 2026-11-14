@@ -1,0 +1,66 @@
+# ===== Data & Media (contain facial video / personal data) =====
+DATA/
+DATAcppg/
+Results/
+outputs/
+
+# ===== Models (download separately — see README) =====
+models/
+
+# ===== Third-party code & models (check licenses before publishing) =====
+third_party/
+
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ===== Virtual Environments =====
+.venv/
+.venv-tscan/
+venv/
+env/
+
+# ===== IDE & Editor =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Temp & Cache =====
+.task-temp/
+.codex-spreadsheet-read/
+
+# ===== Archive & Internal Docs =====
+archive/
+documents/
+
+# ===== Internal briefs & reviews (not for public repo) =====
+ATTENTION_*.md
+GITHUB_PROJECT_BRIEF.md
+concepts_brief.md
+goldfish_review_report.md
+NEW_DATASET_BENCHMARK_PLAN.md
+new_dataset_split.json
+PROJECT_PLAN.md
+ROADMAP_7_DAYS.md
+DEVELOPMENT_STATUS.md
+TEMPLATE_MATCHING_BRIEF.md
+TSCAN_EXPERIMENT_PLAN.md
+DATA_PROVENANCE.md
+
+# ===== Legacy test with hardcoded paths =====
+ippg/tests/Cppg_measure
+
+# ===== Legacy code (kept locally, not published) =====
+ippg/legacy/
