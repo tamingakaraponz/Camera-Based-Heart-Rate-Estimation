@@ -1,5 +1,10 @@
 # โปรแกรม iPPG ปัจจุบัน
 
+**ขอบเขตเอกสาร:** ตัวรันหลักสำหรับไฟล์วิดีโอคือ `run_ippg.py` ซึ่งพัก DWT และใช้ POS → bandpass → FFT; ตัวอย่าง DATA/cPPG และ DWT ด้านล่างเป็น workflow เดิมหรือการทดลองแยกและต้องมีข้อมูลในเครื่อง ค่าเริ่มต้นของโมดูลอื่นอาจต่างกัน
+
+**ช่วงปัจจุบัน:** core iPPG และ `analyze_ground_truth.py` ใช้ bandpass/ค้นหา BPM ที่ 0.6–3.0 Hz (36–180 BPM) เป็นค่าเริ่มต้น รายงานและสคริปต์ทดลองเดิมบางตัวระบุ 0.6–2.0 Hz ไว้เองและอาจยังใช้ช่วงเก่า
+
+
 ## ทดลองข้อมูลทยอยเข้า 5/10/15 วินาที
 
 รัน `replay_realtime.py` ด้วย project venv เพื่อทดลองจากคลิปทีละเฟรม คำนวณใหม่จาก RGB ที่มาถึงแล้วเท่านั้น
@@ -38,8 +43,8 @@ manifest บันทึก config, source/code/file hashes, ช่วงเว�
 
 เมื่อไม่ส่ง path จะใช้ `FILE_PATH` ที่ตั้งไว้ด้านบนของสคริปต์ จึงกด Run ใน editor ได้
 กราฟมี PPG เดิม, หลัง band-pass และ FFT พร้อมค่า BPM
-ค่าเริ่มต้น Butterworth order 3, 0.6–2.0 Hz (36–120 BPM)
-เปลี่ยนช่วงด้วย `--low 0.6 --high 3.0` หากต้องการค้นหาถึง 180 BPM
+ค่าเริ่มต้น Butterworth order 3, 0.6–3.0 Hz (36–180 BPM)
+เปลี่ยนช่วงเองได้ด้วย `--low` และ `--high`
 ใช้ `--output outputs/result-new.png --no-show` เพื่อบันทึกกราฟโดยไม่เปิดหน้าต่าง; ไม่เขียนทับ output ที่มีอยู่
 
 Dependency เฉพาะสคริปต์นี้: `numpy scipy matplotlib` ไม่ต้องใช้กล้องหรือ MediaPipe
@@ -119,7 +124,7 @@ Pipeline: RGB → resample → raw POS → DWT → soft threshold → IDWT → r
 - ใช้ `--wavelet-strategy all-details` เพื่อทำ soft threshold ทุก detail แบบเดิมสำหรับเปรียบเทียบ
 - ไม่มี wavelet ใน G-R หรือ cPPG; ไม่ใช้ cPPG ปรับ threshold
 - ปรับได้ด้วย `--wavelet db4 --wavelet-level auto --wavelet-strength 1.0 --wavelet-strategy protect-pulse-band`
-- โปรแกรมหลักและตัวเปรียบเทียบหนึ่งวิธีใช้ POS+DWT เป็นค่าเริ่มต้น; เพิ่ม `--denoise none` เพื่อใช้ POS เดิม
+- ตัวรันหลัก `run_ippg.py` พัก DWT แล้ว; core CLI และตัวเปรียบเทียบที่อธิบายในส่วนนี้ยังอาจใช้ DWT ตามค่า config ของตน
 - โปรแกรมสามกราฟแสดง baseline และ DWT เสมอ จึงไม่มี `--denoise`
 - หาก PyWavelets ขาด จะแจ้งคำสั่งติดตั้ง ไม่ข้ามขั้นตอนเงียบ ๆ
 - level ระบุเองเกินขีดจำกัดจะ error; auto ลดระดับได้; ข้อมูลสั้นเกิน DWT จะเตือนและคืนสำเนาเดิม
@@ -211,3 +216,59 @@ Interpolation ไม่ได้เพิ่มจำนวนการวัด
 ```powershell
 & "..\.venv\Scripts\python.exe" -m unittest discover -s "ippg\tests" -p "test_*.py" -v
 ```
+
+## Interface
+
+| ไฟล์และ symbol | หน้าที่ |
+|---|---|
+| [run_ippg.py](run_ippg.py): `main` | CLI รับ path วิดีโอ, `--duration`, `--preview`, `--no-show`, `--output-root`; ใช้ POS/legacy/ไม่ใช้ DWT/no background |
+| [ippg_v2_refactored.py](ippg_v2_refactored.py): `IPPGConfig`, `analyze_video`, `extract_video_signals`, `analyze_signals` | ตั้งค่า ดึง RGB และวิเคราะห์คลื่น คืน `IPPGResult` พร้อม stages/metadata |
+| [replay_realtime.py](replay_realtime.py): `TimeBuffer`, `ReplayEngine`, `evaluate` | replay แบบหน้าต่าง trailing 5/10/15 วินาที; CLI ต้องมีวิดีโอและ reference |
+| [analyze_ground_truth.py](analyze_ground_truth.py): `analyze_file`, `main` | วิเคราะห์ PPG text 3 แถว; รับ `--fs`, `--low`, `--high`, `--order` |
+| [signal_recording.py](signal_recording.py): `save_bundle`, `save_ippg_run`, `save_reference_run` | บันทึก NPZ/CSV/กราฟ/manifest/report |
+| [compare_dev_methods.py](compare_dev_methods.py): `chrom` | ตัวสกัด CHROM สำหรับการทดลอง แยกจาก core POS |
+
+กลุ่มงานทดลองที่แยกจากตัวรันหลัก:
+
+| กลุ่ม | จุดเริ่มอ่านและหน้าที่ |
+|---|---|
+| เปรียบเทียบคลื่นกับ cPPG | [compare_ppg.py](compare_ppg.py): `compare_filtered_signals`; [compare_gr_pos_cppg.py](compare_gr_pos_cppg.py): `prepare_comparison`; [compare_pos_ica_cppg.py](compare_pos_ica_cppg.py): `prepare_comparison` |
+| อ่าน cPPG จาก Excel / ทดลอง wavelet | [benchmark_background_methods.py](benchmark_background_methods.py): `load_contact_ppg`; [benchmark_mother_wavelets.py](benchmark_mother_wavelets.py): `validate_records`, `aggregate_records` |
+| ชุดข้อมูลใหม่และ POS/CHROM | [inspect_new_dataset.py](inspect_new_dataset.py): `inspect`; [benchmark_new_dataset.py](benchmark_new_dataset.py): `development_inputs`; [evaluate_waveform_dev.py](evaluate_waveform_dev.py): `measure` |
+| เปรียบเทียบผลที่บันทึกแล้ว | [compare_saved_signals.py](compare_saved_signals.py): `read_run`, `compare`, `estimate_lag` |
+| FFT ละเอียด / คลื่นแม่แบบ / attention | [compare_dense_fft.py](compare_dense_fft.py), [trial_short_templates.py](trial_short_templates.py), [trial_previous_bpm_real.py](trial_previous_bpm_real.py), [attention_real_video.py](attention_real_video.py) เป็นสคริปต์ทดลองที่ทำงานระดับ module |
+
+โมดูลทดลองมี input/output เฉพาะงาน ต้องอ่าน source/config ก่อนใช้กับชุดข้อมูลใหม่; attention pilots ต้องมี Torch และไฟล์โมเดลจาก `third_party/tscan` เพิ่มเติม
+
+## Invariants
+
+- `ippg_v2_refactored.py:mean_skin_rgb` และ `resample_to_fps` ใช้ RGB รูป N×3 ตามลำดับ R/G/B; เวลา finite และเพิ่มขึ้นอย่างเคร่งครัด พร้อม FPS บวก
+- `ippg_v2_refactored.py:process_pulse` เก็บ raw, reconstructed, filtered แยกกัน; ค่าเริ่มต้น DWT และ bandpass อยู่ใน `IPPGConfig` ส่วน G-R ไม่ผ่าน DWT
+- `ippg_v2_refactored.py:estimate_heart_rate` เลือกยอด FFT ที่ใช้ได้ภายในช่วงค้นหา ค่าเริ่มต้น config 0.6–3 Hz การเปลี่ยน grid ไม่เพิ่มข้อมูลการวัด
+- `replay_realtime.py:TimeBuffer` รับ observation ตามเวลาที่เพิ่มขึ้น; `ReplayEngine.push` คำนวณรอบก่อนรับเฟรมอนาคต และ `reference_window` ใช้เฉพาะ reference ที่มาถึงรอบนั้นพร้อมตรวจช่วงข้อมูลขาด
+- `analyze_ground_truth.py:analyze_file` รวม timestamp ซ้ำและปฏิเสธเวลาย้อนกลับ แถว BPM ที่ให้มาถูกเก็บไว้แต่ไม่ใช้เลือกยอด FFT
+- `signal_recording.py:save_ippg_run` รองรับ single POS ที่ background เป็น none; ค่า ROI quality ของ legacy เป็น placeholder และไม่ใช่ความเชื่อมั่น
+- `benchmark_background_methods.py:load_contact_ppg` อ่าน XLSX โดยใช้สองคอลัมน์ตัวเลขแรกเป็น amplitude/time แล้วจัดเรียงและรวมเวลาซ้ำ; เป็น input คนละรูปแบบกับ PPG text 3 แถว
+- `benchmark_new_dataset.py:development_inputs` ตรวจให้ development/held-out ไม่ซ้ำกัน พร้อมตรวจตำแหน่งและ size/mtime ของไฟล์; `compare_dev_methods.py:chrom` ใช้หน้าต่าง 1.6 วินาที overlap 50% และกรองภายใน 0.7–2.5 Hz
+- `compare_saved_signals.py:read_run` ตรวจ manifest สถานะ complete, hashes และแกนเวลา; `estimate_lag` ทดลองเลื่อนเวลาภายในขอบเขตโดยไม่กลับขั้ว ควรแยกผลนี้จากการเทียบบนเวลาเดิม
+- `check_cppg_five_new_people.py:FACTOR` และ `check_cppg_time_hypothesis.py` เป็นการทดลองความไวต่อสมมติฐาน 34/32 ไม่ใช่การแก้ reference ที่ยืนยันแล้ว
+
+## Side Effects
+
+- `ippg_v2_refactored.py:extract_video_signals` เปิดวิดีโอและ tracker มี calibration และอาจเปิด preview; `plot_result` อาจเปิดหน้าต่างกราฟ
+- `run_ippg.py:main`, `analyze_ground_truth.py:main` ส่งออก successful runs; `signal_recording.py:save_bundle` สร้างโฟลเดอร์เฉพาะรอบและ manifest สถานะ writing/complete/failed พร้อม hashes
+- `replay_realtime.py:main` บันทึก logs, CSV, NPZ ของแต่ละช่วงและกราฟในโฟลเดอร์เฉพาะรอบ แม้ buffer วิเคราะห์จำกัดความยาว แต่ logs/stages สะสมได้ตามความยาวคลิป
+- `run_ippg.py:VIDEO_FILE`, `analyze_ground_truth.py:FILE_PATH`, `replay_realtime.py:DEFAULT_VIDEO` มี path เฉพาะเครื่องเดิม ควรส่ง path ต้นฉบับที่ต้องการเป็น argument
+- `run_ippg.py:PROJECT_PYTHON` และ `replay_realtime.py:PROJECT_PYTHON` อาจเปลี่ยนไปใช้ `.venv/Scripts/python.exe` ใน parent ของ checkout โดยอัตโนมัติเมื่อรันเป็น script
+- **อย่า import สคริปต์ทดลองโดยถือว่าไม่มีผลข้างเคียง:** เช่น `attention_*.py`, `compare_dense_fft.py`, `trial_short_templates.py`, `trial_previous_bpm_real.py`, `audit_waveform_morphology.py` และ `benchmark_five_ppg_peaks.py` มีคำสั่งอ่านข้อมูล/ประมวลผล/เขียนผลระดับ module บางไฟล์ใช้ output เดิมซ้ำและเขียนทับได้
+- `compare_ppg.py:validate_output` ตรวจนามสกุล ไม่ให้ทับ input และต้องมี `--overwrite` หาก output มีอยู่แล้ว ข้อคุ้มครองนี้ไม่ได้ครอบคลุมสคริปต์ทดลองทั้งหมด
+
+## Verification
+
+รันจากโฟลเดอร์หลักด้วย environment ที่มี dependencies:
+
+```powershell
+python -m unittest discover -s ippg/tests -p "test_*.py"
+```
+
+คำสั่งนี้เป็นวิธีตรวจโค้ด ไม่ใช่หลักฐานว่ารอบ bootstrap รันทดสอบผ่านแล้ว งานทดลองที่ต้องมีวิดีโอ/PPG ต้องเตรียมไฟล์และโมเดลตาม source ก่อนรัน

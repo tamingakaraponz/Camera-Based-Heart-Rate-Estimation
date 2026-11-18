@@ -57,12 +57,12 @@ def main():
         show_preview=args.preview,
         pulse_method="pos",
         roi_method="legacy",
-        denoise="dwt",
+        denoise="none",
         background_method="none",
     )
 
     try:
-        # วิดีโอ -> ใบหน้า/ผิว -> RGB -> POS -> DWT -> band-pass -> FFT -> BPM
+        # วิดีโอ -> ใบหน้า/ผิว -> RGB -> POS -> band-pass -> FFT -> BPM
         result = analyze_video(args.video.expanduser(), config)
     except (OSError, RuntimeError, ValueError) as error:
         print(f"ERROR: {error}", file=sys.stderr)

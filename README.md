@@ -9,10 +9,12 @@ Camera-based pulse measurement could make contactless heart-rate estimation more
 ## Processing Pipeline
 
 ```
-Facial video → face tracking and skin regions → RGB signals → POS → wavelet denoising → band-pass filtering → FFT → estimated heart rate
+Facial video → face tracking and skin regions → RGB signals → POS → band-pass filtering → FFT → estimated heart rate
 ```
 
 The current video-file workflow uses facial regions from the forehead and cheeks. Experimental scripts also compare POS and CHROM, template-based BPM estimation, and measurements over 5-, 10-, and 15-second windows.
+
+The main workflow filters and searches for heart rate in **0.6–3.0 Hz (36–180 BPM)**. Historical experiments may explicitly use the earlier 0.6–2.0 Hz range.
 
 ## Project Structure
 
@@ -38,8 +40,8 @@ The current video-file workflow uses facial regions from the forehead and cheeks
 
 ### Prerequisites
 
-- Python 3.10+
-- A webcam or recorded facial video file
+- Python compatible with the pinned packages in `requirements-ippg.txt`. Local experiments used Python 3.14; a clean installation on other versions has not been verified.
+- A recorded facial video file
 
 ### Setup
 
@@ -74,7 +76,7 @@ This project uses the [MediaPipe Face Landmarker](https://developers.google.com/
 
 ```bash
 # Run iPPG processing on a video file
-python ippg/run_ippg.py
+python ippg/run_ippg.py "path/to/video.avi" --no-show
 ```
 
 > **Note:** You will need to provide your own facial video and, optionally, a `ground_truth.txt` file with reference PPG data. See the script for configuration details.
@@ -116,3 +118,37 @@ The current results come from a small development dataset. Reference timing and 
 ## License
 
 This project is shared for educational and research purposes. Please check the licenses of individual dependencies before reuse.
+
+## System Overview
+
+The [iPPG component](ippg/README.md) owns recorded-video extraction, pulse analysis, reference comparison and local experiment runners. [Pipeline notes](ippg/PIPELINE.md) describe the processing stages. The main CLI is `ippg/run_ippg.py:main`; optional experiments have separate inputs and output policies.
+
+## Interface
+
+- [ippg/README.md](ippg/README.md) documents the component interface, invariants and side effects.
+- [requirements-ippg.txt](requirements-ippg.txt) specifies the pinned Python dependencies.
+- [ippg/assets/haarcascade_frontalface_default.xml](ippg/assets/haarcascade_frontalface_default.xml) supplies a bundled Haar face-detection asset.
+- `ippg/tests/` holds verification code. Data, generated results, model downloads, environments and third-party folders are excluded from this documentation bootstrap according to `.gitignore`.
+
+## Invariants
+
+- `ippg/run_ippg.py:main` selects POS, legacy ROI, no DWT and no background compensation. DWT, CHROM and template estimators remain available in separate experimental workflows.
+- `ippg/ippg_v2_refactored.py:resample_to_fps` requires strictly increasing finite timestamps, matching finite RGB arrays and positive FPS. RGB uses R/G/B channel order.
+- `ippg/replay_realtime.py:ReplayEngine.push` evaluates each update before accepting a later frame. Replay is unpaced and has not established live-camera throughput.
+- `ippg/analyze_ground_truth.py:analyze_file` interprets three rows as waveform, supplied BPM and time. It estimates BPM from waveform and time; waveform/clock validity remains important when interpreting comparisons.
+
+## Side Effects
+
+- `ippg/run_ippg.py:main` reads video/model files and saves successful results through `ippg/signal_recording.py:save_ippg_run` under `outputs/signal_runs` by default.
+- `ippg/run_ippg.py:PROJECT_PYTHON` and `ippg/replay_realtime.py:PROJECT_PYTHON` may relaunch with a Windows `.venv` in the checkout's parent directory when run as scripts. This existing local convention can override the active interpreter.
+- Experimental modules may write outputs during import. Consult the component README before using an experiment as a library.
+
+## Verification
+
+From the repository root, in a compatible environment:
+
+```powershell
+python -m unittest discover -s ippg/tests -p "test_*.py"
+```
+
+This command is documented from the existing project workflow. The documentation bootstrap does not constitute a new passing test run. Historical data-dependent experiments require their local input files.

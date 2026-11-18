@@ -20,7 +20,7 @@ from scipy.signal import butter, sosfiltfilt
 # Change this path when running with the Run button in your editor.
 FILE_PATH = Path(r"C:\Users\Akkarapon\Downloads\subject1-20261104T091024Z-1-001\subject1\ground_truth.txt")
 LOWCUT_HZ = 0.6   # 36 BPM
-HIGHCUT_HZ = 2.0  # 120 BPM; change with --high if needed
+HIGHCUT_HZ = 3.0  # 180 BPM; change with --high if needed
 
 
 @dataclass

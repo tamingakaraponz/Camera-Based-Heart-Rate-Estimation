@@ -45,6 +45,19 @@ class ResamplingTests(unittest.TestCase):
 
 
 class POSTests(unittest.TestCase):
+    def test_default_band_recovers_pulse_above_120_bpm(self) -> None:
+        fps = 30.0
+        time = np.arange(20.0 * fps) / fps
+        # The old 2 Hz cutoff suppressed the stronger pulse and left slow noise.
+        pulse = np.sin(2 * np.pi * 2.5 * time) + 0.3 * np.sin(2 * np.pi * 0.75 * time)
+        config = IPPG.IPPGConfig(denoise="none")
+        processed = IPPG.process_pulse(pulse, fps, "pos", config)
+        frequencies, spectrum = IPPG.calculate_spectrum(time, processed.filtered, fps)
+        bpm = IPPG.estimate_heart_rate(
+            frequencies, spectrum, config.forehead_low_hz, config.forehead_high_hz
+        )
+        self.assertAlmostEqual(bpm, 150.0, delta=3.1)
+
     def test_common_brightness_change_is_rejected(self) -> None:
         fps = 30.0
         time = np.arange(8.0 * fps) / fps

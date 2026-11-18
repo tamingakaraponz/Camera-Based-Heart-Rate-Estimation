@@ -98,7 +98,7 @@ class IPPGConfig:
     skin_mask_ema_alpha: float = 0.40
 
     forehead_low_hz: float = 0.6
-    forehead_high_hz: float = 2.0
+    forehead_high_hz: float = 3.0
     forehead_filter_order: int = 6
 
     background_low_hz: float = 0.7
